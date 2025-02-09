@@ -8,3 +8,9 @@ lmdb
 requests
 timm
 einops
+
+onnx                     1.17.0
+onnxconverter-common     1.14.0
+onnxmltools              1.13.0
+onnxruntime              1.20.1
+onnxruntime-gpu          1.20.1
