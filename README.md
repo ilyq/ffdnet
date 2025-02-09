@@ -1,3 +1,8 @@
+https://github.com/microsoft/onnxconverter-common
+https://github.com/daquexian/onnx-simplifier
+https://developer.aliyun.com/article/1598013
+
+
 ## Training and testing codes for USRNet, DnCNN, FFDNet, SRMD, DPSR, MSRResNet, ESRGAN, BSRGAN, SwinIR, VRT, RVRT
 [![download](https://img.shields.io/github/downloads/cszn/KAIR/total.svg)](https://github.com/cszn/KAIR/releases) ![visitors](https://visitor-badge.glitch.me/badge?page_id=cszn/KAIR) 
 
