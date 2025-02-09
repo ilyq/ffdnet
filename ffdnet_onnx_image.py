@@ -4,25 +4,24 @@ import numpy as np
 import onnxruntime
 
 
-def preprocess_image_with_padding(image_path, in_nc=1):
-    if in_nc == 1:
-        # 读取灰度图片
-        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        print(img.shape)
-        if img is None:
-            raise ValueError(f"无法读取图片：{image_path}")
-        img = img.astype(np.float32) / 255.0
-        # add channel dimension: (H, W) -> (1, H, W)
+def preprocess_image_with_padding(image_path):
+    # 自动检测图片通道数
+    img = cv2.imread(image_path)
+    if img is None:
+        raise ValueError(f"无法读取图片：{image_path}")
+
+    if len(img.shape) == 2:
+        # 灰度图像
+        in_nc = 1
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = np.expand_dims(img, axis=0)
     else:
-        # 读取彩色图片
-        img = cv2.imread(image_path, cv2.IMREAD_COLOR)
-        print(img.shape)
-        if img is None:
-            raise ValueError(f"无法读取图片：{image_path}")
+        # 彩色图像
+        in_nc = 3
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.astype(np.float32) / 255.0
         img = img.transpose(2, 0, 1)
+
+    img = img.astype(np.float32) / 255.0
 
     # 记录原始高宽
     orig_h, orig_w = img.shape[1], img.shape[2]
@@ -34,12 +33,11 @@ def preprocess_image_with_padding(image_path, in_nc=1):
     pad_right = new_w - orig_w
 
     # 使用 np.pad 做简单的复制边缘 padding
-    # 这里只对 H 和 W 维度进行 Padding，要求数组的格式为 (C, H, W)
     img = np.pad(img, ((0, 0), (0, pad_bottom), (0, pad_right)), mode="edge")
 
     # 添加 batch 维度: (1, C, H, W)
     img = np.expand_dims(img, axis=0)
-    return img, orig_h, orig_w
+    return img, orig_h, orig_w, in_nc
 
 
 def postprocess_output(output):
@@ -64,18 +62,22 @@ def postprocess_output(output):
 
 
 def main():
-    onnx_model_path = "ffdnet_color_clip.onnx"
-    in_nc = 3
     noise_level = 15 / 255.0
+
+    # image_path = "input_image.png"
+    image_path = "input_image01.png"
+    # image_path = "input_color.jpg"
+    img, orig_h, orig_w, in_nc = preprocess_image_with_padding(image_path)
+
+    # 根据图像通道数选择不同的 ONNX 模型
+    if in_nc == 1:
+        onnx_model_path = "ffdnet_gray_clip.onnx"
+    else:
+        onnx_model_path = "ffdnet_color_clip.onnx"
 
     ort_session = onnxruntime.InferenceSession(
         onnx_model_path, providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
     )
-
-    # image_path = "input_image.png"
-    # image_path = "input_image01.png"
-    image_path = "input_color.jpg"
-    img, orig_h, orig_w = preprocess_image_with_padding(image_path, in_nc=in_nc)
 
     sigma = np.full((1, 1, 1, 1), noise_level, dtype=np.float32)
     ort_inputs = {"input_image": img, "sigma": sigma}
@@ -91,11 +93,12 @@ def main():
     else:
         output = output[:orig_h, :orig_w, :]
 
-    cv2.imwrite("output_color.png", output)
-    print("推理结果已保存至: output_color.png")
+    cv2.imwrite("output.png", output)
+    print("推理结果已保存至: output.png")
 
 
 if __name__ == "__main__":
     st = time.time() * 1000
     main()
     print(time.time() * 1000 - st)
+
